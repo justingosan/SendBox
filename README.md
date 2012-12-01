@@ -6,12 +6,11 @@ Also an online guide here: [SendBox Guide](http://sendbox.ap01.aws.af.cm/doc/)
 
 ##Requirements:
 
-Django 1.4+
-ElementTree 1.2+
-Requests 0.14+
-
-[Box](http://box.com) App API Key
-[SendGrid](http://sendgrid.com) API Key
+* [Django](https://www.djangoproject.com/) 1.4+
+* [ElementTree](http://effbot.org/zone/element-index.htm) 1.2+
+* [Requests](http://docs.python-requests.org/en/latest/) 0.14+
+* [Box](http://box.com) App API Key
+* [SendGrid](http://sendgrid.com) API Key
 
 
 Quick Setup:
