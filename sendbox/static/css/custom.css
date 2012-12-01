@@ -1,0 +1,21 @@
+body {
+    background: url(../img/groovepaper.png) repeat;
+    background-color: #eee;
+    margin-top: 70px;
+}
+
+.messages{
+    list-style: none;
+}
+
+.float-right{
+    float: right;
+}
+
+label.error {
+  display: none !important;
+}
+
+input.error {
+    box-shadow: 0.5px 0.5px 8px red;
+}

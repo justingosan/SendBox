@@ -1,0 +1,81 @@
+{% load staticfiles %}
+{% load url from future %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>SendBox</title>
+        <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.min.css" %}" />
+        <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap-responsive.min.css" %}" />
+        <link rel="stylesheet" type="text/css" href="{% static "css/custom.css" %}" />
+    </head>
+    <body>
+        <div class="navbar navbar-fixed-top">
+              <div class="navbar-inner">
+                <div class="container">
+                    <div class="span7">
+                        <a class="brand" href="{% url 'sendbox_index_view' %}">SendBox</a>
+                         <ul class="nav pull-right">
+                          <li class=""><a href="{% url 'sendbox_docs' %}">Guide</a></li>
+                        </ul>
+                    </div>
+                </div>
+              </div>
+            </div>
+        <div class="container">
+            
+            <div class="row">
+                <div class="span8">
+                    {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                                <li{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% block main %}
+                        {% if auth_token %}
+                        <div class="well">
+                            <h3>Session is still active!</h3>
+                            <div class="alert alert-warning">
+                                <span>If I were a real live app, I wouldn't have displayed the auth_token or ticket string to you :)</span>
+                            </div>
+                            <h4>Your auth_token string is: {{ auth_token }}</h4>
+                            <a class="btn btn-primary btn-success" href="{% url 'sendbox_app_view' 0 %}" type="button"><i class="icon-star icon-white"></i> Go to SendBox App!</a> <b>or</b>
+                            <a class="btn btn-warning urlButton" href="{% url 'logout' %}" type="button"><i class="icon-off icon-white"></i> Logout!</a>
+                        </div>
+                        <h4>Or you can create another one:</h4>
+                        {% endif %}
+                        <form method="POST" class="well" action="{% url 'get_auth_token_handler' %}">
+                            {% csrf_token %}
+                            <h4 class="control-label">Your ticket string is: {{ ticket }}</h4>
+                            <input type="hidden" name="ticket" value="{{ ticket }}"/>
+                            <h4>First we must pair and authenticate the generated ticket with your box account!</h4>
+                            <a class="btn btn-primary btn-large btn-block" target="new_window" href="{{ url }}" type="button"><i class="icon-user icon-white"></i> Login to Box.com</a>
+                            <div class="alert alert-info">
+                                <span>Since I'm not really a live app, you may want your Box account to forget me after we're done playing :)  Navigate to <a href="https://www.box.com/settings">Box Account Settings</a> > Security Tab</span>
+                            </div>
+                            <blockquote>
+                                <h4>If Box.com cannot redirect to me after you login, you can manually retreive and use
+                                    the authentication token by clicking this button:
+                                </h4>
+                                <button class="btn btn-primary btn-small" id="boxAuth" type="submit">Manual Authentication</button>
+                                <h4>..otherwise you may close this window.</h4>
+                            </blockquote>
+                        </form>
+                    {% endblock %}
+                </div>
+            </div>
+            <hr/>
+            <footer class="footer">
+                <a href="http://jz10.info">© 2012 jz10.info</a>
+            </footer>
+        </div>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+        <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.10.0/jquery.validate.js"></script>
+        <script type="text/javascript" src="{% static "js/bootstrap.min.js" %}"></script>
+        {% block js%}
+        {% endblock %}
+    </body>
+</html>

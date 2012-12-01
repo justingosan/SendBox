@@ -1,0 +1,103 @@
+{% extends 'sendbox/index.html' %}
+{% load url from future %}
+
+{% block main %}
+        <!-- MAIN SENDBOX APP -->
+        <div class="well">
+            <div>
+                <h4>Browsing '{{ folder }}'</h4>
+            </div>
+            <div class="float-right">
+                {% if parent %}
+                <a class="btn btn-primary btn-small" href="{% url 'sendbox_app_view' parent.id %}"><i class="icon-zoom-out icon-white"></i> Up one level</a>
+                {% endif %}
+                <a class="btn btn-warning btn-small urlButton" href="{% url 'logout' %}" type="button"><i class="icon-off icon-white"></i> Logout!</a>
+            </div>
+        <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>File/Folder Name</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+            <tbody>
+            {% for item in items %}
+                <tr class="{% ifequal item.type 'folder' %} warning {% endifequal %}">
+                    <td>{{ item.type|capfirst }}</td>
+                    <td>{{ item.name|truncatechars:50 }}</td>
+                    <td>
+                        {% if item.type == 'folder' %}
+                        <a href="{% url 'sendbox_app_view' item.id %}"><i class="icon-folder-open"></i> Open</a>
+                        {% elif item.type == 'file' %}
+                        <a file-id="{{ item.id }}" file-name="{{ item.name }}" class="shareLink" href="#emailModal" role="button" data-toggle="modal"><i class="icon-envelope"></i> Share</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                    <tr class="error"><td colspan='2'>No files here! Try adding files to this Box folder.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <!-- MODAL -->
+        <div id="emailModal" tabindex="-1" role="dialog" aria-labelledby="Email Form" aria-hidden="true" class="modal hide fade">
+            <form id="emailForm" method="POST" action="{% url 'sendbox_processor' %}">
+            {% csrf_token %}
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 id="filename">Send Link</h4>
+              </div>
+              <div class="modal-body">
+                  <input name="email" class="span5 required" type="email" multiple="multiple" placeholder="To: sendbox@sb.ph[, john@doe.ph, jz10@jz10.info] (Required)">
+                  <input name="subject" class="span5" type="email" placeholder="{{ subject }} (Default)">
+                  <input name="file_id" id="inputFile" type="hidden"/>
+                  <textarea name="message" class="field span5" id="textarea" rows="6" placeholder="Message: (Optional)"></textarea>
+              </div>
+              <div class="modal-footer">
+                <a href="#" class="btn" data-dismiss="modal" aria-hidden="true">Close</a>
+                <button class="btn btn-primary" type="submit">Send Email</button>
+              </div>
+            </form>
+        </div>
+{% endblock %}
+
+
+{% block js%}
+<script type="text/javascript">
+$(function(){
+    $('.shareLink').click(function(){
+        var file_id = $(this).attr('file-id'); 
+        var file_name = $(this).attr('file-name'); 
+        $('#inputFile').val(file_id);
+        $('#filename').text('Sending "' + file_name +'"');
+    })
+
+//simple multiple email validator
+jQuery.validator.addMethod(
+"multiemails",
+     function(value, element) {
+         if (this.optional(element))
+             return true;
+         var emails = value.split(/[,]+/);
+         valid = true;
+         for (var i in emails) {
+             value = emails[i];
+             valid = valid &&
+                     jQuery.validator.methods.email.call(this, $.trim(value), element);
+         }
+         return valid;
+     },
+
+   jQuery.validator.messages.multiemails
+);
+
+    $("#emailForm").validate({
+        rules: {
+                emails: { required: true, multiemails: true }
+            }
+    });
+})
+</script>
+{% endblock %}

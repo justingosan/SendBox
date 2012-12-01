@@ -1,0 +1,515 @@
+{% load staticfiles %}
+{% load url from future %}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>SendBox Guide</title>
+        <link rel="stylesheet" type="text/css" href="{% static "css/bootstrap.min.css" %}" />
+        <link rel="stylesheet" type="text/css" href="{% static "css/custom.css" %}" />
+        <link href="{% static "css/rainbow-github.css" %}" rel="stylesheet" type="text/css">
+        <style>
+            .close, .close:hover {
+                float:none !important;
+                color: navy !important;
+                text-decoration: none !important;
+                cursor: text !important;
+                opacity: 1 !important;
+                filter: none !important;
+                font-size: 13px !important;
+                font-weight: normal !important;
+            }
+            #main a {
+                color: green;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="navbar navbar-fixed-top">
+              <div class="navbar-inner">
+                <div class="container">
+                    <a class="brand" href="{% url 'sendbox_index_view' %}">SendBox</a>
+                    <ul class="nav pull-right">
+                      <li class="active"><a href="{% url 'sendbox_index_view' %}">Home</a></li>
+                      <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                          Contents
+                          <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li><a href="#top">A few initial words and assumptions</a></li>
+                          <li><a href="#initial">Initial Requirements</a></li>
+                          <li><a href="#basicenv">Basic environment setup</a></li>
+                          <li><a href="#views">Constructing the App's Django Views</a></li>
+                          <li><a href="#index">--Index Page</a></li>
+                          <li><a href="#auth">--Authentication Handler</a></li>
+                          <li><a href="#mainapp">--Main Application Page</a></li>
+                          <li><a href="#emails">--Sending them Emails</a></li>
+                          <li><a href="#logout">--Logging Out</a></li>
+                          <li><a href="#whatsnext">What's Next</a></li>
+                        </ul>
+                      </li>
+                    </ul>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+                <div id="main" class="span12">
+                    <h3 id="top">Integrating Box and SendGrid: Building a Django App using their REST API</h3>
+                    <hr/>
+                    <h4>A few initial words and assumptions:</h4>
+                    <p>This guide will walk you through constructing a functional Django Application which will, in a nutshell, allow the user to login to his Box account, select a file and email that particular file via SendGrid. You can find the working application and our supposed final product here: <a href="{% url 'sendbox_index_view' %}">SendBox</a>. You need a <a href="http://box.com">Box account</a> to play around with it ;). If you care to dive into it by yourself, you can download the full source. Be sure to check 'README' doc for quickly setting it up.</p>
+
+                    <p>Before anything, I will assume that you already have basic working knowledge on constructing a standard Django Application. By this, I mean that you have at least gone through and understood the concepts found in the <a href="https://docs.djangoproject.com/en/dev/intro/tutorial01/">Django 'Polls' tutorial</a>. I will also assume that you are familiar on interacting with the standard <a href="http://www.restapitutorial.com/">REST API</a> (GET, POST and PUT at least). Discussion on Django specific code will be <i>minimal</i> and template code will be <i>stripped down</i> to show only the significant parts. In any case, I took the liberty of including comments to almost all lines of the app's code, including those native to Django. For the template, I used <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> for quick, beautiful prototyping. You can check my full versions of the app's template in the source code.</p>
+                    <p>The app's code is built around defining methods on how to interact with the REST API specific to SendGrid and Box, with more emphasis on the latter. That said, the code will be a bit repetitive especially on chunks which communicate with the said APIs.</p> 
+                    <hr/>
+                    <h4 id="initial">Initial Requirements:</h4>
+                    <p>Alright! First things first: we're going to need API Keys from both <a href="http://box.com">Box</a> and <a href="http://sendgrid.com/">SendGrid</a> (both are free). In order to grab one from Box.com, we're going to need a <a href="https://www.box.com/signup/personal/">free Box user account</a>. After logging in, you need to create your own <a href="https://www.box.com/developers/services/edit/">Box Developer Application</a>. Give it a unique name and grab the API Key on the next page. No need to fill in the other fields for now.</p>
+
+                    <ul class="thumbnails">
+                      <li class="span8">
+                        <div class="thumbnail">
+                          <img src="{% static 'img/box_api.png' %}" alt="">
+                        </div>
+                      </li>
+                    </ul>
+
+                    <p>For the SendGrid API Key, again, we need a <a href="https://sendgrid.com/user/signup">free user account</a>. You may have to wait a while for your account to get provisioned and you may move on to the next paragraph while you wait. If in any case you get denied, you may simply tell them that you need an API Key for an app you are making (at least that's what I did) and they'll be happy to approve your account. After logging in, navigate to <a href="http://sendgrid.com/credentials">SendGrid 'credentials' page</a> then create a new user with access to the 'Mail'. The username and password will be your api user and key, respectively.</p>
+
+                    <ul class="thumbnails">
+                      <li class="span8">
+                        <div class="thumbnail">
+                          <img src="{% static 'img/sendgrid_api.png' %}" alt="">
+                        </div>
+                      </li>
+                    </ul>
+
+                    <p>Everything cool? Ok! Lets start building our app.</p>
+
+                    <hr/>
+                    <h4 id="basicenv">Basic environment setup:</h4>
+                    <div class="alert alert-info">NOTE: I will be referring to the app we're building as '<b>SendBox</b>' and use this name for my variables. Feel free to replace it with your own app name.</div>
+                    <p>Open up your command line and lets get our programming environment ready:</p>
+                    <pre><code>pip install django requests elementtree</code></pre>
+                    <p>'<a href="http://docs.python-requests.org/en/latest/">Requests</a>' is what we'll use to make HTTP requests from Django. '<a href="http://effbot.org/zone/element-index.htm">ElementTree</a>' is what we'll use to deserialize xml responses into python dictionaries.</p>
+                    <p>Next, lets get the Django boilerplate going:</p>
+<pre><code># feel free to change quoted names accordingly
+python path/to/django-admin.py startproject 'myproject'
+cd 'myproject'
+python manage.py startapp 'sendbox'
+</code></pre>
+                <p>Now open up '<b>myproject/settings.py</b>' and refer to the code below on how to edit this file:</p>
+<pre><code data-language="python"># myproject/settings.py
+
+#Box Config
+BOX_API_KEY = 'helloyouiama30characterapikey'
+
+#SendGrid Config
+SENDGRID_API_URL = "https://sendgrid.com/api/mail.send.json"
+SENDGRID_API_USER = "api_user"
+SENDGRID_API_KEY = "api_user_password"
+DEFAULT_EMAIL_SUBJECT = "I've shared a file to you from Box.com!"
+
+# We need this for storing pesistent session variables...
+# See Django Sessions
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+
+# ...and a database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(PROJECT_PATH, 'database.sqlite'),
+    }
+}
+
+# Don't forget to append our created app
+INSTALLED_APPS = {
+    ...
+    'sendbox'
+}</code></pre>
+                <p>Create an empty '<b>urls.py</b>' in '/sendbox/' if there isn't one and open up '<b>/myproject/urls.py</b>' and add in our app's urls:</p>
+<pre><code data-language="python">urlpatterns = patterns('',
+    ...
+    url(r'', include('sendbox.urls')),
+)</code></pre>
+                <p>Then finally, back to the command line:</p>
+<pre><code>python manage.py syncdb
+# No need for an admin user
+</code></pre>
+                <p>Feel free to setup your project's '<b>template</b>', '<b>media</b>' and '<b>static</b>' directories during all of these.</p>
+                <div class="alert alert-info">NOTE: you can go ahead and copy both 'sendbox/templates/' and 'sendbox/static/' folders to your django app's directory if you don't want to use the stripped-down code</div>
+
+                <hr/>
+                <h4 id="views">Constructing the App's Django Views:</h4>
+                <p>For this app, we're going to be defining 5 function-based views: 2 page views (the index and main app pages), 2 form handlers (authentication and shared link generation) and 1 utility view (for logging out and clearing sessions). I'll be explaining what each one's purpose is as we go along. Again, a working finished product can be found here: <a href="{% url 'sendbox_index_view' %}">SendBox</a>.</p>
+                <p>Let's setup placeholders for now to avoid errors as some views are dependent on others:</p>
+<pre><code data-language="python">#sendbox/views.py
+
+import requests                         # HTTP lib for python
+import json                             # Python Standard Library - JSON parsing utility
+import elementtree.ElementTree as ET    # fast XML parser
+
+from django.conf import settings
+from django.shortcuts import render_to_response, redirect
+from django.contrib import messages
+from django.template import RequestContext
+
+# actual pages
+def sendbox_index_view(request):
+    pass
+
+def sendbox_app_view(request, folder_id=0):
+    pass
+
+# form handlers
+def get_auth_token_handler(request):
+    pass
+
+def sendbox_processor(request):
+    pass
+
+# utility view
+def logout(request):
+    pass
+
+# regular utility function
+# used in 'sendbox_processor'
+def sendgrid_email_handler(request_vars, filename, shared_link):
+    pass
+</code ></pre>
+<pre><code data-language="python"># sendbox/urls.py
+# dont forget to change 'sendbox' to your app's name
+
+from django.conf.urls import patterns, url
+
+urlpatterns = patterns('sendbox.views',
+    url(r'^$', 'sendbox_index_view', name="sendbox_index_view"),
+    url(r'^sendbox/(?P&#60;folder_id>.*)/?$', 'sendbox_app_view', name="sendbox_app_view"),
+    url(r'^get_auth_token_handler/$', 'get_auth_token_handler', name="get_auth_token_handler"),
+    url(r'^process/$', 'sendbox_processor', name="sendbox_processor"),
+    url(r'^logout/$', 'logout', name='logout'),
+)</code></pre>
+                <p>Go ahead and add empty 'sendbox/templates/sendbox/index.html' and 'sendbox/templates/sendbox/sendbox.html' for the index and main app template, respectively (See Django Templates).</p>
+                <hr/>
+                <h4 id="index">Index Page:</h4>
+                <p>Our index page will be responsible for facilitating user authentication between our app and the Box user's account. The end goal of this page will be to acquire an authenticated ticket from Box which in turn, will be used to acquire an authenticated token (auth_token) used for accessing the Box user's files. You can go through Box's straightforward documentation on the matter here: <a href="http://developers.box.com/get-started/#authenticating">Authentication</a>. This is view implements step 1 and 2 from the documentation. Below is the annotated code to our app's index view:</p>
+<pre><code data-language="python"># sendbox/views.py
+
+def sendbox_index_view(request):
+    '''
+    Application Entry Point. Retrieves generated Box.com ticket upon construction.
+    Facilitates app authentication with user's Box account
+    '''
+    url = u'https://www.box.com/api/1.0/rest'           # build url for ticket retrieval
+    params = {'action': 'get_ticket',                   # build GET parameters
+                'api_key': settings.BOX_API_KEY}
+    context = {}
+    try:
+        response = requests.get(url, params=params)                 # GET request for ticket
+        obj = ET.XML(response.content)                              # parse xml response to python object
+        ticket = obj.findtext('ticket')                             # extract value from 'ticket' tag
+        url = u'https://www.box.com/api/1.0/auth/%s' % ticket       # build url for Box.com ticket authentication
+        context = {'ticket': ticket, 'url': url, }                  # template context (see django templates)
+    except AttributeError:                                          # triggers when obj.find('ticket') asserts to None
+        messages.error(request, "Invalid API Key!")                 # django message dispatcher (see django messages doc)
+        pass
+
+    if request.session.get('auth_token'):                           # check if auth_token already exists
+        context['auth_token'] = request.session.get('auth_token')   # add it to context for displaying to user
+
+    return render_to_response('sendbox/index.html',                 # HttpResponse shortcut (see django shortcuts doc)
+                                context,
+                                    context_instance=RequestContext(request))
+</code></pre>
+                <p>This view outputs a URL which directs the user to Box for authentication. Here's the template for this view:</p>
+<pre><code data-language="html"># template sendbox/index.html (stripped-down version)
+
+&#123;&#37; load staticfiles &#37;&#125;
+&#123;&#37; load url from future &#37;&#125;
+&#60;html&#62;
+    &#60;head&#62;
+        &#60;title&#62;SendBox&#60;&#47;title&#62;
+    &#60;&#47;head&#62;
+    &#60;body&#62;
+        &#60;&#33;&#45;&#45; Django messages rendering &#45;&#45;&#62;
+        &#123;&#37; if messages &#37;&#125;
+            &#60;ul class&#61;&quot;messages&quot;&#62;
+                &#123;&#37; for message in messages &#37;&#125;
+                    &#60;li&#62;&#123;&#123; message &#125;&#125;&#60;&#47;li&#62;
+                &#123;&#37; endfor &#37;&#125;
+            &#60;&#47;ul&#62;
+        &#123;&#37; endif &#37;&#125;
+
+        &#123;&#37; block main &#37;&#125;
+            &#60;&#33;&#45;&#45; Dont do display ticket or auth&#95;token string on live app &#45;&#45;&#62;
+            &#123;&#37; if auth&#95;token &#37;&#125;
+                &#60;h4&#62;Your auth&#95;token string is&#58; &#123;&#123; auth&#95;token &#125;&#125;&#60;&#47;h4&#62;
+                &#60;a href&#61;&quot;&#123;&#37; url &#39;sendbox&#95;app&#95;view&#39; 0 &#37;&#125;&quot;&#62;Go to SendBox App&#33;&#60;&#47;a&#62;&#60;br&#47;&#62;
+                &#60;a href&#61;&quot;&#123;&#37; url &#39;logout&#39; &#37;&#125;&quot;&#62;Logout&#33;&#60;&#47;a&#62;&#60;br&#47;&#62;
+            &#123;&#37; endif &#37;&#125;
+        &#60;form method&#61;&quot;POST&quot; class&#61;&quot;well&quot; action&#61;&quot;&#123;&#37; url &#39;get&#95;auth&#95;token&#95;handler&#39; &#37;&#125;&quot;&#62;
+            &#123;&#37; csrf&#95;token &#37;&#125;
+            &#60;h4 class&#61;&quot;control&#45;label&quot;&#62;Your ticket string is&#58; &#123;&#123; ticket &#125;&#125;&#60;&#47;h4&#62;&#60;br&#47;&#62;
+            &#60;input type&#61;&quot;hidden&quot; name&#61;&quot;ticket&quot; value&#61;&quot;&#123;&#123; ticket &#125;&#125;&quot;&#47;&#62;&#60;br&#47;&#62;
+            &#60;a target&#61;&quot;new&#95;window&quot; href&#61;&quot;&#123;&#123; url &#125;&#125;&quot;&#62;Login to Box&#46;com &#60;&#47;a&#62;&#60;br&#47;&#62;
+            &#60;button type&#61;&quot;submit&quot;&#62;Manual Authentication&#60;&#47;button&#62;
+        &#60;&#47;form&#62;
+        &#123;&#37; endblock &#37;&#125;
+
+        &#123;&#37; block js&#37;&#125;
+        &#123;&#37; endblock &#37;&#125;
+    &#60;&#47;body&#62;
+&#60;&#47;html&#62;
+</code></pre>
+                <p>That's it for our app's index page.</p>
+                <hr/>
+                <h4 id="auth">Authentication Handler:</h4>
+                <p>Next we'll move on to 'get_auth_token' form handler. From the name itself, this view's responsibility is getting the auth_token from Box, saving it to a session variable then redirecting the user to the main app. This is our implementation of step 3 and 4 in <a href="http://developers.box.com/get-started/#authenticating">Box's Authentication documentation</a>. You'll notice in step 4 that there are two ways for our app to retrieve the auth_token. Our code should be able to handle both:</p>
+<pre><code data-language="python"># sendbox/views.py
+
+def get_auth_token_handler(request):
+    '''
+    Receives: POST data 'ticket' OR GET request with parameters 'auth_token' and 'ticket' from Box
+    Pairs authenticated ticket with Box API Key to retreive Auth auth_token
+    needed for accessing user Box files and folders.
+    '''
+
+    if request.session.get('auth_token'):                           # if an active session is present
+        return redirect('sendbox_app_view', folder_id=0)            # redirect to main app page
+
+    if request.method == 'POST' and request.POST.get('ticket'):  # if POST request was made
+            url = u'https://www.box.com/api/1.0/rest'            # build request url for auth_token retrieval
+            params = {'action': 'get_auth_token',                # build GET parameters
+                        'api_key': settings.BOX_API_KEY,
+                            'ticket': request.POST['ticket']}
+            try:
+                response = requests.get(url, params=params)         # GET request for auth_token retrieval
+                obj = ET.XML(response.content)                      # parse xml response to python object
+                auth_token = obj.findtext('auth_token')             # extract value from 'auth_token' tag
+                request.session['auth_token'] = auth_token          # store auth_token in session key (see django sessions doc)
+                return redirect('sendbox_app_view', folder_id=0)    # redirect to main app page
+            except AttributeError:
+                messages.error(request, "Invalid Ticket! Try logging in again!")
+                return redirect('sendbox_index_view')                    # django reverse() shortcut (see django shortcuts doc)
+
+    if request.GET.get('auth_token') and request.GET.get('ticket'):     # if GET parameters are present (for Box.com redirection)
+        request.session['auth_token'] = request.GET['auth_token']   # just store auth_token in session key
+        return redirect('sendbox_app_view', folder_id=0)            # redirect to main app page
+
+    messages.error(request, "Cannot access this page directly!")
+    return redirect('sendbox_index_view')                           # redirect to home page
+</code></pre>
+<div class="alert alert-info">NOTE: You can check out what Box's XML and JSON response looks like on in its <a href="http://developers.box.com/docs/">official API documentation</a> (Check right side). You can also add breakpoints in our code (right below the 'obj' variables and examine the raw 'response' variable or the parsed 'obj' variable)</div>
+                <p>By now, the user should be able to authenticate with Box and our app capable of retrieving the auth_token.</p>
+                <hr/>
+                <h4 id="mainapp">Main Application Page:</h4>
+                <p>Now to the main app page. Upon entry, this view retrieves, by default, the contents of the user's root Box folder (folder_id = 0) and displays it accordingly in a rendered template. Here's the <a href="http://developers.box.com/docs/#folders">official documentation</a> for the Box 'folder' API. This view is also structured in a way that it allows navigation to child folders as we will see here:</p>
+<pre><code data-language="python">#views.py
+
+def sendbox_app_view(request, folder_id=0):     # if folder_id = 0: get all items from root directory else: 
+    '''                                         # -   get items from 'folder_id'
+    Main Application View. Displays table of all files and folders on current 'folder_id'.
+    Allows simple folder navigation and provides 'share links' for files.
+    '''
+    if request.session.get('auth_token'):
+        url = "https://api.box.com/2.0/folders/%s" % folder_id              # build request url for folder operations
+        headers = {'Authorization': 'BoxAuth api_key=%s&auth_token=%s' %    # build request headers for authentication
+                (settings.BOX_API_KEY, request.session.get('auth_token'))}
+        context = {}
+        try:
+            response = requests.get(url, headers=headers)      # GET request for items inside 'folder_id'
+            obj = json.loads(response.content)                 # deserialize json response to python dictionary
+            user_email = obj['owned_by']['login']              # gets user email for use as sender email
+            folder = obj['name']                               # returns current folder name
+            items = obj['item_collection']['entries']          # returns list of files and folders on current folder
+            parent = obj['parent']                             # returns parent folder, if any
+            context = {'items': items, 'parent': parent,       # build template context
+                        'folder': folder, 'subject': settings.DEFAULT_SUBJECT}
+            request.session['user_email'] = user_email                           # store user_email in session key for use later
+        except KeyError:
+            messages.error(request, "Error Code: %s" % obj['code'] or "unknown") # returns error code from box api response
+            pass
+
+        return render_to_response('sendbox/sendbox.html',                   # go to main app page whatever the case
+            context, context_instance=RequestContext(request))              # - if session is still active
+
+    messages.error(request, "You have to login!")
+    return redirect('sendbox_index_view')                        # redirect to home page if session is empty
+</code></pre>
+<p>This view's template should render the retrieved items, such that, there ought to be a clear distinction between files and folders. The corresponding links beside each item changes accordingly ('Open' for folders and 'Share' for files). Here's the code:</p>
+<pre><code data-language="html"># template sendbox/sendbox.html (Stripped-down version)
+
+&#123;&#37; extends &#39;sendbox&#47;index&#46;html&#39; &#37;&#125;
+&#123;&#37; load url from future &#37;&#125;
+
+&#123;&#37; block main &#37;&#125;
+&#60;&#33;&#45;&#45; MAIN APP &#45;&#45;&#62;
+&#60;h4&#62;Browsing &#39;&#123;&#123; folder &#125;&#125;&#39;&#60;&#47;h4&#62;
+&#60;div class&#61;&quot;menu&#95;controls&quot;&#62;
+    &#123;&#37; if parent &#37;&#125;
+        &#60;a href&#61;&quot;&#123;&#37; url &#39;sendbox&#95;app&#95;view&#39; parent&#46;id &#37;&#125;&quot;&#62;Up one level&#60;&#47;a&#62;
+    &#123;&#37; endif &#37;&#125;
+    &#60;a href&#61;&quot;&#123;&#37; url &#39;logout&#39; &#37;&#125;&quot;&#62;Logout&#33;&#60;&#47;a&#62;
+&#60;&#47;div&#62;
+&#60;table&#62;
+        &#60;thead&#62;
+            &#60;tr&#62;
+                &#60;th&#62;Type&#60;&#47;th&#62;
+                &#60;th&#62;File&#47;Folder Name&#60;&#47;th&#62;
+                &#60;th&#62;Link&#60;&#47;th&#62;
+            &#60;&#47;tr&#62;
+        &#60;&#47;thead&#62;
+    &#60;tbody&#62;
+    &#123;&#37; for item in items &#37;&#125;
+            &#60;td&#62;&#123;&#123; item&#46;type&#124;capfirst &#125;&#125;&#60;&#47;td&#62;
+            &#60;td&#62;&#123;&#123; item&#46;name&#124;truncatechars&#58;50 &#125;&#125;&#60;&#47;td&#62;
+            &#60;td&#62;
+                &#123;&#37; if item&#46;type &#61;&#61; &#39;folder&#39; &#37;&#125;
+                &#60;a href&#61;&quot;&#123;&#37; url &#39;sendbox&#95;app&#95;view&#39; item&#46;id &#37;&#125;&quot;&#62;Open&#60;&#47;a&#62;
+                &#123;&#37; elif item&#46;type &#61;&#61; &#39;file&#39; &#37;&#125;
+                &#60;&#33;&#45;&#45; Clicking this link should open or display up the form modal &#45;&#45;&#62;
+                &#60;a file&#45;id&#61;&quot;&#123;&#123; item&#46;id &#125;&#125;&quot; file&#45;name&#61;&quot;&#123;&#123; item&#46;name &#125;&#125;&quot; class&#61;&quot;shareLink&quot; href&#61;&quot;&#35;emailModal&quot; data&#45;toggle&#61;&quot;modal&quot;&#62;Share&#60;&#47;a&#62;
+                &#123;&#37; endif &#37;&#125;
+            &#60;&#47;td&#62;
+        &#60;&#47;tr&#62;
+    &#123;&#37; empty &#37;&#125;
+            &#60;tr class&#61;&quot;error&quot;&#62;&#60;td colspan&#61;&#39;2&#39;&#62;No files here&#33; Try adding files to this Box folder&#46;&#60;&#47;td&#62;&#60;&#47;tr&#62;
+    &#123;&#37; endfor &#37;&#125;
+    &#60;&#47;tbody&#62;
+&#60;&#47;table&#62;
+
+&#60;&#33;&#45;&#45; FORM MODAL &#45;&#45;&#62;
+&#60;div id&#61;&quot;emailModal&quot; class&#61;&quot;modal hide&quot;&#62;
+    &#60;form id&#61;&quot;emailForm&quot; method&#61;&quot;POST&quot; action&#61;&quot;&#123;&#37; url &#39;sendbox&#95;processor&#39; &#37;&#125;&quot;&#62;
+    &#123;&#37; csrf&#95;token &#37;&#125;
+        &#60;h4 id&#61;&quot;filename&quot;&#62;Send Link&#60;&#47;h4&#62;
+            &#60;&#33;&#45;&#45; Email should be the only required field &#45;&#45;&#62;
+          &#60;input name&#61;&quot;email&quot; class&#61;&quot;required&quot; type&#61;&quot;email&quot; multiple&#61;&quot;multiple&quot;&#62;
+          &#60;input name&#61;&quot;subject&quot; type&#61;&quot;email&quot; placeholder&#61;&quot;&#123;&#123; subject &#125;&#125; &#40;Default&#41;&quot;&#62;
+          &#60;input name&#61;&quot;file&#95;id&quot; id&#61;&quot;inputFile&quot; type&#61;&quot;hidden&quot;&#47;&#62;
+          &#60;textarea name&#61;&quot;message&quot; id&#61;&quot;textarea&quot; rows&#61;&quot;6&quot;&#62;&#60;&#47;textarea&#62;
+          &#60;button class&#61;&quot;btn btn&#45;primary&quot; type&#61;&quot;submit&quot;&#62;Send Email&#60;&#47;button&#62;
+      &#60;&#47;div&#62;
+    &#60;&#47;form&#62;
+&#60;&#47;div&#62;
+&#123;&#37; endblock &#37;&#125;
+
+&#123;&#37; block js&#37;&#125;
+    &#47;&#47; Necessary Javascript
+    &#47;&#47; Changes file&#95;id hidden input to the id of the file you want to share
+    &#47;&#47; Also displays the filename of the we are sending
+    &#36;&#40;&#39;&#46;shareLink&#39;&#41;&#46;click&#40;function&#40;&#41;&#123;
+        var file&#95;id &#61; &#36;&#40;this&#41;&#46;attr&#40;&#39;file&#45;id&#39;&#41;&#59; 
+        var file&#95;name &#61; &#36;&#40;this&#41;&#46;attr&#40;&#39;file&#45;name&#39;&#41;&#59; 
+        &#36;&#40;&#39;&#35;inputFile&#39;&#41;&#46;val&#40;file&#95;id&#41;&#59;
+        &#36;&#40;&#39;&#35;filename&#39;&#41;&#46;text&#40;&#39;Sending &quot;&#39; &#43; file&#95;name &#43;&#39;&quot;&#39;&#41;&#59;
+    &#125;&#41;
+&#123;&#37; endblock &#37;&#125;
+</code></pre>
+                <div class="alert alert-info">NOTE: The javascript at the bottom is necessary for our code. It forwards the 'file id' to the form to be processed for sharing. I advise that you also implement a modal dialogue for the form (like I did in my app) because it will not look pretty as it stands now :)</div>
+                <hr/>
+                <h4 id="emails">Sending them Emails:</h4>
+                <p>We're almost done! Next we'll tackle the brain of our app: 'sendbox_processor'. This is our second and last form handler for  and it handles two important things: generating a shared link of the chosen file through Box's API and forwarding an email request to SendGrid's API. I chose to put the emailing logic into a separate utility function 'sendgrid_email_handler' as we'll see in the code:</p>
+
+<pre><code data-language="python">#views.py
+
+def sendbox_processor(request):       
+    # (Sorry, syntax highlighter gets broken if I use quotes)
+    # Receives POST value [file_id], [email], [subject], [message]
+    # Generates Share Link based on file_id
+
+    if request.method == 'POST' and request.POST.get('file_id') and request.POST.get('email'):
+        url = "https://api.box.com/2.0/files/%s" % request.POST['file_id']       # build request url for file operations
+        headers = {'Authorization': 'BoxAuth api_key=%s&auth_token=%s' %         # build request headers for authentication
+                (settings.BOX_API_KEY, request.session.get('auth_token'))}
+        data = json.dumps({'shared_link': {'access': 'Open'}})              # serialize http data to JSON for PUT request
+        try:
+            response = requests.put(url, headers=headers, data=data)             # PUT request for shared link generation
+            obj = json.loads(response.content)                                   # deserialize JSON response
+            filename = obj['name']                                               # returns file name
+            shared_link = obj['shared_link']['url']                              # returns file url
+            folder_id = obj['parent']['id']                                      # returns folder_id of file parent
+            messages.success(request, 'Shared Link for file "%s" is: "%s"' %  # by this time, shared link is already generated
+                (filename, shared_link))
+
+            sendgrid = sendgrid_email_handler(request, filename, shared_link) # call utility function for sending our mail
+
+            messages.info(request, 'SendGrid Response Code: %s' % sendgrid['message'])  # returns status code from sendgrid response
+            return redirect('sendbox_app_view', folder_id=folder_id)             # redirect to main app
+
+        except KeyError:
+            messages.error(request, "Error Code: %s" % obj['code'] or "unknown") # returns error code from box api response
+            pass
+
+    return redirect('sendbox_app_view', folder_id=0) # redirect to main app when accessed directly
+
+
+def sendgrid_email_handler(request_vars, filename, shared_link):
+    '''
+    Utility function. Sends message to chosen email recipients.
+    Returns json response from SendGrid
+    '''
+    # Email Section
+    subject = request_vars.POST['subject'] or settings.DEFAULT_SUBJECT         # use default subject if none is provided
+    message = '%s\n\n\nFile Name: "%s"\n\nBox Shared Link: "%s"' % (           # build message body
+                request_vars.POST['message'], filename, shared_link)           # - append box file info and link at the end of message
+
+    emails = request_vars.POST['email'].replace(" ", "").split(',')      # remove whitespace from 'email' POST var and split on ','
+                                                                               # - must be a python list object even if single
+    from_email = request_vars.session['user_email']                            # grab user email from session variable
+
+    params = {'api_user': settings.SENDGRID_API_USER,                  # build GET parameters
+                'api_key': settings.SENDGRID_API_KEY,
+                  'to': emails[:5],                              # limits to first 5 emails for the sake of your SendGrid server :)
+                    'subject': subject,
+                      'text': message,
+                        'from': from_email, }
+    sendgrid_request = requests.get(settings.SENDGRID_API_URL, params=params)   # GET request for sending email to SendGrid API
+    sendgrid_response = json.loads(sendgrid_request.content)
+
+    return sendgrid_response                                    # returns response from SendGrid API
+</code></pre>
+                <div class="alert alert-info">NOTE: You can check out SendGrid's own documentation on its <a href="http://sendgrid.com/docs/API%20Reference/Web%20API/mail.html">Mail Web API</a>.</div>
+                <hr/>
+                <h4 id="logout">Logging Out:</h4>
+                <p>Lastly, our logout view goes like this:</p>
+<pre><code data-language="python">#views.py
+
+def logout(request):
+    request.session.flush()                 # clear server-side session vars
+    messages.error(request, "Logged Out!")
+    return redirect('sendbox_index_view')   # redirect to index page
+</code></pre>
+
+                <p>That's it! If you haven't done so already, run:</p>
+<pre><code>python manage.py runserver</code></pre>
+                <p>...and test out your new app.</p>
+                <hr/>
+                <h4 id="whatsnext">What's Next:</h4>
+                <p>If you haven't done so, make it pretty! <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> is awesome at that.</p>
+                <p>You can put it up on a live server and setup Box Developer App redirection so your users don't have to manually authenticate. Just be sure to have Box redirect to http://your.domain/sendbox/<b>get_auth_token</b> and the app should do the rest :)</p>
+                </div>
+            </div>
+            <hr/>
+            <footer class="footer">
+                <a href="http://jz10.info">© 2012 jz10.info</a>
+            </footer>
+        </div>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+        <script type="text/javascript" src="{% static "js/bootstrap.min.js" %}"></script>
+        <script type="text/javascript" src="{% static "js/rainbow-custom.min.js" %}"></script>
+        <script type="text/javascript">
+        $(function() {
+                $(".dropdown-menu a").click(function() {
+                  var target = $(this).attr("href")
+                  target = target.substring(1,target.length);
+                  $(window).scrollTop($('h4[id="'+target+'"]').offset().top - 60); 
+                  return false; 
+                });
+        });
+        </script>
+    </body>
+</html>
