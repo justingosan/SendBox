@@ -13,7 +13,7 @@ Also an online guide here: [SendBox Guide](http://sendbox.ap01.aws.af.cm/doc/)
 * [SendGrid](http://sendgrid.com) API Key
 
 
-Quick Setup:
+##Quick Setup:
 
 1. Install the required modules:
 	```
