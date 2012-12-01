@@ -16,48 +16,55 @@ Requests 0.14+
 
 Quick Setup:
 
-Install the required modules:
-    pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
+1. Install the required modules:
 
-Start a django project:
-    python django-admin.py startproject 'myproject'
+	pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
 
-Copy '/sendbox/' to project root (beside manage.py).
+2. Start a django project:
 
-Tweak 'myproject/settings':
-    BOX_API_KEY = '' # Box Key goes here
+	python django-admin.py startproject 'myproject'
 
-    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-    #SendGrid Email Config
-    SENDGRID_API_USER = '' # SendGrid API User here
-    SENDGRID_API_KEY = ''  # SendGrid API Pass here
-    DEFAULT_SUBJECT = "I've shared a file to you from Box.com!"
-    SENDGRID_API_URL = "https://sendgrid.com/api/mail.send.json"
+3. Copy '/sendbox/' to project root (beside manage.py).
 
-    # Could be any database (used for session storage)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'Name' : 'database.sqltie'
-            ...
-        }
-    }
+4. Tweak 'myproject/settings':
 
-    INSTALLED_APPS = (
-        ...
-        'sendbox',
-    )
+	BOX_API_KEY = '' # Box Key goes here
 
-Also setup 'myproject/urls':
-    urlpatterns = patterns('',
-        ...
-        url(r'', include('sendbox.urls')),
-    )
+	SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-Now back to the command line:
-    python manage.py syncdb
-    #no need for admin user
+	#SendGrid Email Config
+	SENDGRID_API_USER = '' # SendGrid API User here
+	SENDGRID_API_KEY = ''  # SendGrid API Pass here
+	DEFAULT_SUBJECT = "I've shared a file to you from Box.com!"
+	SENDGRID_API_URL = "https://sendgrid.com/api/mail.send.json"
 
-You're good to go! Run this to test it out:
-    python manage.py runserver
+	# Could be any database (used for session storage)
+	DATABASES = {
+	    'default': {
+	        'ENGINE': 'django.db.backends.sqlite3',
+	        'Name' : 'database.sqltie'
+	        ...
+	    }
+	}
+
+	INSTALLED_APPS = (
+	    ...
+	    'sendbox',
+	)
+
+5. Also setup 'myproject/urls':
+
+	urlpatterns = patterns('',
+	    ...
+	    url(r'', include('sendbox.urls')),
+	)
+
+6. Now back to the command line:
+
+	python manage.py syncdb
+	#no need for admin user
+
+7. You're good to go! Run this to test it out:
+
+	python manage.py runserver
