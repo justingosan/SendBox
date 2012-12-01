@@ -73,31 +73,6 @@ $(function(){
         $('#inputFile').val(file_id);
         $('#filename').text('Sending "' + file_name +'"');
     })
-
-//simple multiple email validator
-jQuery.validator.addMethod(
-"multiemails",
-     function(value, element) {
-         if (this.optional(element))
-             return true;
-         var emails = value.split(/[,]+/);
-         valid = true;
-         for (var i in emails) {
-             value = emails[i];
-             valid = valid &&
-                     jQuery.validator.methods.email.call(this, $.trim(value), element);
-         }
-         return valid;
-     },
-
-   jQuery.validator.messages.multiemails
-);
-
-    $("#emailForm").validate({
-        rules: {
-                emails: { required: true, multiemails: true }
-            }
-    });
 })
 </script>
 {% endblock %}
