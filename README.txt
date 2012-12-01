@@ -16,18 +16,18 @@ Also an online guide here: [SendBox Guide](http://sendbox.ap01.aws.af.cm/doc/)
 ##Quick Setup:
 
 1. Install the required modules:
-	```
+	
 	pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
-	```
+	
 2. Start a django project:
-	```
+	
 	python django-admin.py startproject 'myproject'
-	```
+	
 
 3. Copy '/sendbox/' to project root (beside manage.py).
 
 4. Tweak 'myproject/settings (refer to inline comments)':
-	```python
+	
 	BOX_API_KEY = '' # Box Key goes here
 
 	SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
@@ -51,20 +51,20 @@ Also an online guide here: [SendBox Guide](http://sendbox.ap01.aws.af.cm/doc/)
 	    ...
 	    'sendbox',
 	)
-	```
+	
 5. Also setup 'myproject/urls':
-	```python
+	
 	urlpatterns = patterns('',
 	    url(r'', include('sendbox.urls')),
 	)
-	```
+	
 6. Now back to the command line:
-	```
+	
 	python manage.py syncdb
 	#no need for admin user
-	```
+	
 
 7. You're good to go! Run this to test it out:
-	```
+	
 	python manage.py runserver
-	```
+	
