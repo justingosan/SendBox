@@ -18,13 +18,15 @@ Quick Setup:
 
 Install the required modules:
 '''shell
-pip install -r requirements
+pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
 '''
 
 Start a django project:
 '''shell
 python django-admin.py startproject 'myproject'
 '''
+
+Copy '/sendbox/' to project root (beside manage.py).
 
 Tweak 'myproject/settings':
 '''python
