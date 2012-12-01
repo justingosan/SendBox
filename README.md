@@ -17,59 +17,47 @@ Requests 0.14+
 Quick Setup:
 
 Install the required modules:
-'''shell
-pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
-'''
+    pip install -r https://raw.github.com/justingo/SendBox/master/requirements.txt
 
 Start a django project:
-'''shell
-python django-admin.py startproject 'myproject'
-'''
+    python django-admin.py startproject 'myproject'
 
 Copy '/sendbox/' to project root (beside manage.py).
 
 Tweak 'myproject/settings':
-'''python
-BOX_API_KEY = '' # Box Key goes here
+    BOX_API_KEY = '' # Box Key goes here
 
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-#SendGrid Email Config
-SENDGRID_API_USER = '' # SendGrid API User here
-SENDGRID_API_KEY = ''  # SendGrid API Pass here
-DEFAULT_SUBJECT = "I've shared a file to you from Box.com!"
-SENDGRID_API_URL = "https://sendgrid.com/api/mail.send.json"
+    #SendGrid Email Config
+    SENDGRID_API_USER = '' # SendGrid API User here
+    SENDGRID_API_KEY = ''  # SendGrid API Pass here
+    DEFAULT_SUBJECT = "I've shared a file to you from Box.com!"
+    SENDGRID_API_URL = "https://sendgrid.com/api/mail.send.json"
 
-# Could be any database (used for session storage)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'Name' : 'database.sqltie'
-        ...
+    # Could be any database (used for session storage)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'Name' : 'database.sqltie'
+            ...
+        }
     }
-}
 
-INSTALLED_APPS = (
-    ...
-    'sendbox',
-)
-'''
+    INSTALLED_APPS = (
+        ...
+        'sendbox',
+    )
 
 Also setup 'myproject/urls':
-'''python
-urlpatterns = patterns('',
-    ...
-    url(r'', include('sendbox.urls')),
-)
-'''
+    urlpatterns = patterns('',
+        ...
+        url(r'', include('sendbox.urls')),
+    )
 
 Now back to the command line:
-'''shell
-python manage.py syncdb
-#no need for admin user
-'''
+    python manage.py syncdb
+    #no need for admin user
 
 You're good to go! Run this to test it out:
-'''shell
-python manage.py runserver
-'''
+    python manage.py runserver
